@@ -1,3 +1,5 @@
+const ipAddress = "192.168.0.109";
+
 let html = `
 <!DOCTYPE html>
 <html>
@@ -6,15 +8,52 @@ let html = `
 html, body {
     overscroll-behavior-y: none;
 }
+.tab {
+  overflow: hidden;
+  border: 1px solid #ccc;
+  background-color: #f1f1f1;
+}
+.tab button {
+  background-color: inherit;
+  float: left;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 14px 16px;
+  transition: 0.3s;
+  font-size: 17px;
+}
+.tab button:hover {
+  background-color: #ddd;
+}
+.tab button.active {
+  background-color: #ccc;
+}
+.tabcontent {
+  display: none;
+  padding: 6px 12px;
+  border: 1px solid #ccc;
+  border-top: none;
+}
 table {
     font-family: arial, sans-serif;
     border-collapse: collapse;
     width: 100%;
 }
-td, th {
-    border: 1px solid #dddddd;
-    text-align: left;
-    padding: 8px;
+td {
+    white-space: nowrap;
+}
+.table-cell {
+    position: relative;
+    height: 100px;
+}
+.floating-text {
+    position: absolute;
+    top: 15%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    font-size: 20px;
 }
 .centered {
 	width: 300;
@@ -22,18 +61,78 @@ td, th {
     display: block;
 	text-align: center;
 }
+.alert {
+    padding: 20px;
+    background-color: #f44336;
+    color: white;
+}
+.alert.success {background-color: #04AA6D;}
+.alert.info {background-color: #2196F3;}
+.alert.warning {background-color: #ff9800;}
 </style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
 </head>
 <body>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.1.0/chart.js"></script>
-<div><input type="text" id="inverterAddress" value="192.168.0.109"><span id="inverterStatus"></span>
-<div style="height: 300px; width: 100%;"><canvas id="inverterChart"></canvas></div>
-<table style="height: 300px; width: 100%;">
-<tr>
-    <td><canvas class="centered" id="consumptionGauge" width="400" height="300"></canvas></td>
-    <td><canvas class="centered" id="productionGauge" width="400" height="300"></canvas></td>
-</tr>
-</table>
+
+
+<div class="tab">
+  <button class="tablinks" onclick="openCity(event, 'London')" id="defaultOpen">Realtime Charts</button>
+  <button class="tablinks" onclick="openCity(event, 'Paris')">Configuration</button>
+  <button class="tablinks" onclick="openCity(event, 'Tokyo')">Events</button>
+</div>
+
+
+<div id="London" class="tabcontent">
+    <div style="height: 300px; width: 100%;"><canvas id="inverterChart"></canvas></div>
+    <table style="height: 300px; width: 100%;">
+        <tr>
+        <td class="table-cell"><div class="floating-text">From Solar (Watts)</div><canvas class="centered" id="fromSolarGauge" width="300" height="300"></canvas></td>
+        <td class="table-cell"><div class="floating-text">From Grid (Watts)</div><canvas class="centered" id="fromGridGauge" width="300" height="300"></canvas></td>
+        </tr>
+    </table>
+
+    <div class="alert warning" id="requestFailedAlert" style="display: none;">
+        <strong>Warning!</strong> Cannot locate the inverter, check the IP Address in the Configuration tab.
+    </div>
+  
+
+</div>
+
+<div id="Paris" class="tabcontent">
+    Inverter IP Address: <input type="text" id="inverterAddress" value="${ipAddress}"><span class="material-icons" id="inverterStatus"></span>
+
+    <div class="alert warning" id="ipAddressFailedAlert" style="display: none;">
+        <strong>Warning!</strong> Cannot reach the inverter, IP address may be incorrect, enter the correct address above.
+    </div>
+</div>
+
+<div id="Tokyo" class="tabcontent">
+  <h3>Tokyo</h3>
+  <p>Tokyo is the capital of Japan.</p>
+</div>
+
+<script>
+function openCity(evt, cityName) {
+  var i, tabcontent, tablinks;
+  tabcontent = document.getElementsByClassName("tabcontent");
+  for (i = 0; i < tabcontent.length; i++) {
+    tabcontent[i].style.display = "none";
+  }
+  tablinks = document.getElementsByClassName("tablinks");
+  for (i = 0; i < tablinks.length; i++) {
+    tablinks[i].className = tablinks[i].className.replace(" active", "");
+  }
+  document.getElementById(cityName).style.display = "block";
+  evt.currentTarget.className += " active";
+}
+
+// Get the element with id="defaultOpen" and click on it
+document.getElementById("defaultOpen").click();
+</script>
+   
+
+
 <script src="https://unpkg.com/chartjs-gauge-v3/dist/index.js"></script>
 </body>
 </html>`;
@@ -53,25 +152,25 @@ const data = {
   labels: labels,
   datasets: [{
     label: 'Consumed in full',
-    backgroundColor: 'Teal',
-    borderColor: 'Teal',
+    backgroundColor: 'Orange',
+    borderColor: 'Orange',
     fill: false,
     order: 1,
     pointRadius: 0,
     pointHoverRadius: 0
   },{
-    label: 'Consumed from grid',
-    backgroundColor: 'Red',
-    borderColor: 'Red',
+    label: 'Consumed from solar',
+    backgroundColor: '#66cc00',
+    borderColor: '#66cc00',
     fill: true,
     order: 2,
 	stack: 'Stack 1',
     pointRadius: 0,
     pointHoverRadius: 0
   },{
-    label: 'Consumed from solar',
-    backgroundColor: 'Yellow',
-    borderColor: 'Yellow',
+    label: 'Consumed from grid',
+    backgroundColor: '#ff0000',
+    borderColor: '#ff0000',
     fill: true,
     order: 3,
 	stack: 'Stack 1',
@@ -97,6 +196,24 @@ const config = {
         maintainAspectRatio: false,
         animation: { duration: 0, easing: 'linear' },
         scales: {
+            x: {
+                ticks: { 
+                    autoSkip: false,
+                    maxRotation: 15,
+                    minRotation: 15,
+                },
+                grid: {
+                    drawTicks: true,
+                    tickLength: 10,
+                    tickWidth: 2,
+                    tickColor: 'Black'
+                },
+                afterBuildTicks: function(scale) {
+                    scale.ticks = scale.ticks.filter(function(value, index) {
+                        return (index % 15 === 0);
+                    });
+                }                
+            },
             y: {
                 beginAtZero: true,
                 position: 'right',
@@ -104,6 +221,12 @@ const config = {
                 gridLines: { drawOnChartArea: true },
                 grid: { z: 1 },
                 ticks: { stepSize: 100 }
+            }
+        },
+        plugins: {
+            title: {
+                display: true,
+                text: 'Power Over Time'
             }
         }
     }
@@ -114,12 +237,11 @@ const inverterChart = new Chart(canvas, config);
 
 
 
-
-function addData(chart, label, p_load_data, p_grid_from_grid_data, p_from_solar, p_grid_to_grid_data) {
+function addData(chart, label, p_load_data, p_from_solar, p_grid_from_grid_data, p_grid_to_grid_data) {
     chart.data.labels.push(label);
     chart.data.datasets[0].data.push(p_load_data);
-    chart.data.datasets[1].data.push(p_grid_from_grid_data);
-    chart.data.datasets[2].data.push(p_from_solar);
+    chart.data.datasets[1].data.push(p_from_solar);
+    chart.data.datasets[2].data.push(p_grid_from_grid_data);
     chart.data.datasets[3].data.push(p_grid_to_grid_data);
 
     if (chart.data.labels.length > 120)
@@ -136,10 +258,10 @@ function addData(chart, label, p_load_data, p_grid_from_grid_data, p_from_solar,
 
 let script2 = `
 
-var consumptionCanvas;
-var consumptionGauge;
-var productionCanvas;
-var productionGauge;
+var fromGridCanvas;
+var fromGridGauge;
+var fromSolarCanvas;
+var fromSolarGauge;
 
 function addGaugeData(chart, newdata) {
     chart.data.datasets[0].value = newdata;
@@ -166,44 +288,74 @@ setTimeout(function() {
         black: '#404244',
       };
 
+    var config1 = {
+        type: 'gauge',
+        data: {
+            //labels: ['Success', 'Warning', 'Warning', 'Fail'],
+            datasets: [{
+                data: [300, 1000, 4000, 8000],
+                value: 1,
+                backgroundColor: ["#ff9999", "#ff0000", "#b81414", "#660000"],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: false,
+            layout: {
+                padding: {
+                    top: 0,
+                    bottom: 0
+                }
+            },
+            valueLabel: {
+                backgroundColor: 'Black',
+                formatter: Math.round,
+                offsetY: '30%',
+                font: {
+                    size: 24
+                }
+            }
+        }
+    };
+
     var config2 = {
         type: 'gauge',
         data: {
-          //labels: ['Success', 'Warning', 'Warning', 'Fail'],
-          datasets: [{
-            data: [300, 1000, 4000, 8000],
-            value: 1,
-            backgroundColor: [CHART_COLORS.green, CHART_COLORS.yellow, CHART_COLORS.orange, CHART_COLORS.red],
-            borderWidth: 2
-          }]
+            //labels: ['Success', 'Warning', 'Warning', 'Fail'],
+            datasets: [{
+                data: [300, 1000, 4000, 8000],
+                value: 1,
+                backgroundColor: ["#99ff33", "#66cc00", "#4d9900", "#336600"],
+                borderWidth: 2
+            }]
         },
         options: {
-          responsive: true,
-          title: {
-            display: true,
-            text: 'Gauge chart'
-          },
-          layout: {
-            padding: {
-                top: 0,
-                bottom: 0
+            responsive: false,
+            layout: {
+                padding: {
+                    top: 0,
+                    bottom: 0
+                }
+            },
+            valueLabel: {
+                backgroundColor: 'Black',
+                formatter: Math.round,
+                offsetY: '30%',
+                font: {
+                    size: 24
+                }
             }
-          },
-          valueLabel: {
-            formatter: Math.round,
-          }
         }
-      };
+    };
+
+
   
+    fromSolarCanvas = document.getElementById('fromSolarGauge').getContext('2d');
+    fromSolarGauge = new Chart(fromSolarCanvas, config2);
 
+    fromGridCanvas = document.getElementById('fromGridGauge').getContext('2d');
+    fromGridGauge = new Chart(fromGridCanvas, config1);
 
-
-
-    consumptionCanvas = document.getElementById('consumptionGauge').getContext('2d');
-    consumptionGauge = new Chart(consumptionCanvas, config2);
-
-    productionCanvas = document.getElementById('productionGauge').getContext('2d');
-    productionGauge = new Chart(productionCanvas, config2);
 
 
 
@@ -235,7 +387,9 @@ timer.schedule(async () => {
 
     try {
         result = await request.loadJSON();
-        await wv.evaluateJavaScript("document.getElementById('inverterStatus').textContent = 'good';", false);
+        await wv.evaluateJavaScript("document.getElementById('requestFailedAlert').style.display = 'none';", false);
+        await wv.evaluateJavaScript("document.getElementById('ipAddressFailedAlert').style.display = 'none';", false);
+        await wv.evaluateJavaScript("document.getElementById('inverterStatus').innerHTML = '&#xe2e6;';", false);
 
         var d = new Date();
         var newLabel = d.toLocaleTimeString();
@@ -251,18 +405,14 @@ timer.schedule(async () => {
 
         var p_from_solar = p_load - p_grid_from_grid;                   // Consumed from solar (not from the grid)
 
-        await wv.evaluateJavaScript('addData(inverterChart, "' + newLabel + '", ' + p_load + ', ' + p_grid_from_grid + ', ' + p_from_solar + ', ' + p_grid_to_grid + ');', false);
-        //await wv.evaluateJavaScript('addGaugeData(consumptionGauge, ' + p_grid_from_grid + ');', false);
-        await wv.evaluateJavaScript('addGaugeData(consumptionGauge, ' + p_load + ');', false);
+        await wv.evaluateJavaScript('addData(inverterChart, "' + newLabel + '", ' + p_load + ', ' + p_from_solar + ', ' + p_grid_from_grid + ', ' + p_grid_to_grid + ');', false);
+        await wv.evaluateJavaScript('addGaugeData(fromGridGauge, ' + p_grid_from_grid + ');', false);
+        await wv.evaluateJavaScript('addGaugeData(fromSolarGauge, ' + (p_from_solar+p_grid_to_grid) + ');', false);
     } catch (err)
     {
-        await wv.evaluateJavaScript("document.getElementById('inverterStatus').textContent = 'bad';", false);
+        await wv.evaluateJavaScript("document.getElementById('requestFailedAlert').style.display = 'block';", false);
+        await wv.evaluateJavaScript("document.getElementById('ipAddressFailedAlert').style.display = 'block';", false);
+        await wv.evaluateJavaScript("document.getElementById('inverterStatus').innerHTML = '&#xe000;';", false);
     }
 
-    /*
-    let alert = new Alert();
-    alert.title = "Debug";
-    alert.message = result;
-    alert.present();
-*/
 });
